@@ -1,11 +1,10 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 """
 Export a YOLOv5 PyTorch model to other formats. TensorFlow exports authored by https://github.com/zldrobit
-
 Format                  | Example                   | Export `include=(...)` argument
 ---                     | ---                       | ---
 PyTorch                 | yolov5s.pt                | -
-TorchScript             | yolov5s.torchscript       | 'torchscript'
+TorchScript             | yolov5s.torchscript.pt    | 'torchscript'
 ONNX                    | yolov5s.onnx              | 'onnx'
 CoreML                  | yolov5s.mlmodel           | 'coreml'
 TensorFlow SavedModel   | yolov5s_saved_model/      | 'saved_model'
@@ -13,20 +12,17 @@ TensorFlow GraphDef     | yolov5s.pb                | 'pb'
 TensorFlow Lite         | yolov5s.tflite            | 'tflite'
 TensorFlow.js           | yolov5s_web_model/        | 'tfjs'
 TensorRT                | yolov5s.engine            | 'engine'
-
 Usage:
     $ python path/to/export.py --weights yolov5s.pt --include torchscript onnx coreml saved_model pb tflite tfjs
-
 Inference:
     $ python path/to/detect.py --weights yolov5s.pt
-                                         yolov5s.torchscript
+                                         yolov5s.torchscript.pt
                                          yolov5s.onnx
                                          yolov5s.mlmodel  (under development)
                                          yolov5s_saved_model
                                          yolov5s.pb
                                          yolov5s.tflite
                                          yolov5s.engine
-
 TensorFlow.js:
     $ cd .. && git clone https://github.com/zldrobit/tfjs-yolov5-example.git && cd tfjs-yolov5-example
     $ npm install
@@ -66,12 +62,14 @@ def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:'
     # YOLOv5 TorchScript model export
     try:
         LOGGER.info(f'\n{prefix} starting export with torch {torch.__version__}...')
-        f = file.with_suffix('.torchscript')
+        f = file.with_suffix('.torchscript.pt')
+        fl = file.with_suffix('.torchscript.ptl')
 
         ts = torch.jit.trace(model, im, strict=False)
         d = {"shape": im.shape, "stride": int(max(model.stride)), "names": model.names}
         extra_files = {'config.txt': json.dumps(d)}  # torch._C.ExtraFilesMap()
         (optimize_for_mobile(ts) if optimize else ts).save(str(f), _extra_files=extra_files)
+        (optimize_for_mobile(ts) if optimize else ts)._save_for_lite_interpreter(str(fl))
 
         LOGGER.info(f'{prefix} export success, saved as {f} ({file_size(f):.1f} MB)')
     except Exception as e:
